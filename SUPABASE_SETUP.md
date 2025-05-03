@@ -23,73 +23,156 @@ Após a criação do projeto, acesse a seção "Table Editor" no menu lateral e 
 
 ### Tabela `decks`
 
-```sql
-CREATE TABLE decks (
-  id UUID PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  is_default BOOLEAN DEFAULT FALSE
-);
-```
+1. Clique em "Create a new table"
+2. Defina:
+   - Nome da tabela: `decks`
+   - Descrição (opcional): "Baralhos de cartas do jogo"
+   - Marque "Enable Row Level Security (RLS)"
+   - Configuração de colunas:
+     - `id` (tipo: uuid, Primary Key, Default: gen_random_uuid())
+     - `name` (tipo: text)
+     - `is_active` (tipo: boolean, Default: true)
+     - `data` (tipo: jsonb)
+   - Clique em "Save"
 
 ### Tabela `black_cards`
 
-```sql
-CREATE TABLE black_cards (
-  id UUID PRIMARY KEY,
-  text TEXT NOT NULL,
-  deck_id UUID REFERENCES decks(id) ON DELETE CASCADE
-);
-```
+1. Clique em "Create a new table"
+2. Defina:
+
+   - Nome da tabela: `black_cards`
+   - Descrição (opcional): "Cartas pretas do jogo"
+   - Marque "Enable Row Level Security (RLS)"
+   - Configuração de colunas:
+     - `id` (tipo: uuid, Primary Key, Default: gen_random_uuid())
+     - `text` (tipo: text)
+     - `deck_id` (tipo: uuid)
+     - `pick` (tipo: integer, Default: 1)
+   - Clique em "Save"
+
+3. Configure a chave estrangeira:
+   - Vá para a seção "Foreign keys"
+   - Clique em "Add foreign key relation"
+   - Coluna: deck_id
+   - Tabela referenciada: decks
+   - Coluna referenciada: id
+   - Escolha "Cascade" para a ação "On Delete"
+   - Clique em "Save"
 
 ### Tabela `white_cards`
 
+1. Clique em "Create a new table"
+2. Defina:
+
+   - Nome da tabela: `white_cards`
+   - Descrição (opcional): "Cartas brancas do jogo"
+   - Marque "Enable Row Level Security (RLS)"
+   - Configuração de colunas:
+     - `id` (tipo: uuid, Primary Key, Default: gen_random_uuid())
+     - `text` (tipo: text)
+     - `deck_id` (tipo: uuid)
+   - Clique em "Save"
+
+3. Configure a chave estrangeira:
+   - Vá para a seção "Foreign keys"
+   - Clique em "Add foreign key relation"
+   - Coluna: deck_id
+   - Tabela referenciada: decks
+   - Coluna referenciada: id
+   - Escolha "Cascade" para a ação "On Delete"
+   - Clique em "Save"
+
+### Tabela `rooms`
+
+1. Clique em "Create a new table"
+2. Defina:
+   - Nome da tabela: `rooms`
+   - Descrição (opcional): "Salas de jogo"
+   - Marque "Enable Row Level Security (RLS)"
+   - Configuração de colunas:
+     - `id` (tipo: uuid, Primary Key, Default: gen_random_uuid())
+     - `created_at` (tipo: timestamp with time zone, Default: now())
+     - `name` (tipo: text)
+     - `data` (tipo: jsonb)
+     - `is_active` (tipo: boolean, Default: true)
+   - Clique em "Save"
+
+## 4. Configurar políticas de segurança (RLS)
+
+Para cada tabela, você precisa configurar políticas de segurança para permitir acesso público (já que o aplicativo não requer autenticação):
+
+### Para a tabela `decks`
+
+1. Vá para a tabela "decks"
+2. Clique na aba "Policies"
+3. Clique em "New Policy"
+4. Escolha "Create a policy from scratch"
+5. Defina:
+   - Policy name: "Enable all operations for all users"
+   - Policy definition: FOR ALL USING (true) WITH CHECK (true)
+   - Clique em "Review" e depois em "Save policy"
+
+Alternativamente, crie políticas separadas para cada operação (SELECT, INSERT, UPDATE, DELETE) com expressão `true`.
+
+### Para a tabela `black_cards`
+
+Repita o mesmo processo da tabela `decks`.
+
+### Para a tabela `white_cards`
+
+Repita o mesmo processo da tabela `decks`.
+
+### Para a tabela `rooms`
+
+1. Vá para a tabela "rooms"
+2. Clique na aba "Policies"
+3. Clique em "New Policy"
+4. Escolha "Create a policy from scratch"
+5. Defina:
+   - Policy name: "Enable all operations for all users"
+   - Policy definition: FOR ALL USING (true) WITH CHECK (true)
+   - Clique em "Review" e depois em "Save policy"
+
+## 5. Habilitar o Realtime
+
+Para garantir que as atualizações nas salas de jogo sejam propagadas em tempo real:
+
+1. No menu lateral, vá para "Database" → "Replication"
+2. Na seção "Realtime", habilite:
+   - Checkbox "Select tables to replicate" (no plano Free, são limitadas a 5 tabelas)
+   - Selecione a tabela `rooms` (essa é a mais importante para funcionalidades em tempo real)
+3. Clique em "Save changes"
+
+## 6. Obter as credenciais de API
+
+1. No menu lateral, vá para "Project Settings" → "API"
+2. Anote:
+   - Project URL (algo como https://[string-aleatória].supabase.co)
+   - anon public key (começa com "eyJ...")
+3. Crie um arquivo `.env.local` na raiz do seu projeto com as seguintes variáveis:
+   ```
+   VITE_SUPABASE_URL=sua_url_do_projeto
+   VITE_SUPABASE_ANON_KEY=sua_chave_anon
+   VITE_ADMIN_PASSWORD=senha_para_acesso_admin
+   ```
+
+## 7. Testando a configuração
+
+1. Volte ao seu projeto de desenvolvimento
+2. Execute-o localmente com `npm run dev`
+3. Verifique se o aplicativo consegue se conectar ao Supabase criando um novo baralho ou sala
+
+Se precisar limpar os dados para testes, você pode usar as seguintes consultas SQL em "Database" → "SQL Editor":
+
 ```sql
-CREATE TABLE white_cards (
-  id UUID PRIMARY KEY,
-  text TEXT NOT NULL,
-  deck_id UUID REFERENCES decks(id) ON DELETE CASCADE
-);
+-- Limpar todas as salas
+UPDATE rooms SET is_active = false;
+
+-- Ou deletar completamente
+DELETE FROM rooms;
+
+-- Resetar dados de teste, se necessário
+DELETE FROM white_cards;
+DELETE FROM black_cards;
+DELETE FROM decks;
 ```
-
-## 4. Configurar as políticas de segurança (RLS)
-
-Por padrão, o Supabase aplica Row Level Security, o que significa que nenhum dado é acessível sem configuração adicional. Como este é um aplicativo de demonstração, vamos criar políticas que permitem acesso público para leitura e escrita:
-
-Para cada tabela, acesse a aba "Authentication" > "Policies" e adicione:
-
-### Políticas para `decks`
-
-1. Clique em "New Policy" e selecione "Create a policy from scratch"
-2. Nome da política: "Enable read access for all users"
-3. Tipo de política: SELECT
-4. Usando expressão: TRUE
-5. Clique em "Save policy"
-
-6. Clique em "New Policy" novamente
-7. Nome da política: "Enable insert access for all users"
-8. Tipo de política: INSERT
-9. Usando expressão: TRUE
-10. Clique em "Save policy"
-
-11. Adicione políticas semelhantes para UPDATE e DELETE
-
-### Repita o processo para `black_cards` e `white_cards`
-
-Crie políticas de SELECT, INSERT, UPDATE e DELETE para cada tabela.
-
-## 5. Obter as credenciais de API
-
-1. No menu lateral, acesse "Project Settings" > "API"
-2. Copie a "Project URL" e "anon public" key
-3. Crie um arquivo `.env.local` na raiz do seu projeto e adicione:
-
-```
-VITE_SUPABASE_URL=https://ddhcveruewixmxboyblj.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkaGN2ZXJ1ZXdpeG14Ym95YmxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTE0MzksImV4cCI6MjA2MTg2NzQzOX0.Gnt017F9h_Nut5qzlXSsty7bSOyLeMhIG79LfNexfsM
-VITE_ADMIN_PASSWORD=66/'9>PCm+<
-```
-
-## 6. Verificação (opcional)
-
-Para verificar se a configuração está correta, você pode adicionar alguns dados manualmente no Supabase usando o "Table Editor" e depois verificar se eles aparecem no seu aplicativo.

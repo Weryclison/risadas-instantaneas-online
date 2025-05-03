@@ -17,8 +17,89 @@ Um jogo de cartas divertido inspirado em "Cards Against Humanity", projetado par
 3. Os outros jogadores escolhem uma carta branca de sua mão para responder
 4. O juiz escolhe a resposta mais engraçada
 5. O jogador cuja carta foi escolhida ganha um ponto
-6. A função de juiz passa para o próximo jogador
-7. Após 10 rodadas, o jogador com mais pontos vence!
+6. O papel de juiz passa para o próximo jogador
+7. Quem tiver mais pontos no final do jogo é o vencedor!
+
+## Recursos Técnicos
+
+- Frontend React com TypeScript e Tailwind CSS
+- Gerenciamento de estado usando Context API
+- Sistema de banco de dados Supabase para persistência de dados
+- Suporte a atualizações em tempo real com Supabase Realtime
+- Design responsivo para desktop e dispositivos móveis
+- Deploy na Vercel
+
+## Recursos Online
+
+Com a integração do Supabase, o jogo possui os seguintes recursos online:
+
+1. **Persistência de Dados**: Todos os baralhos, cartas e salas são armazenados em um banco de dados Supabase.
+
+2. **Jogo Multijogador Online**: Jogadores em diferentes dispositivos podem jogar juntos em tempo real.
+
+3. **Atualizações em Tempo Real**: As ações dos jogadores são sincronizadas instantaneamente em todos os dispositivos.
+
+4. **Convites por Link**: Compartilhe facilmente um link para que amigos entrem na sua sala.
+
+## Configuração do Projeto
+
+### Pré-requisitos
+
+- Node.js 16+ e npm
+- Conta na Vercel (para deploy)
+- Conta no Supabase (para banco de dados)
+
+### Instalação e Execução Local
+
+1. Clone o repositório
+
+```bash
+git clone https://github.com/seu-usuario/risadas-instantaneas.git
+cd risadas-instantaneas
+```
+
+2. Instale as dependências
+
+```bash
+npm install
+```
+
+3. Configure o Supabase seguindo as instruções em `SUPABASE_SETUP.md`
+
+4. Crie um arquivo `.env.local` com suas variáveis de ambiente
+
+```
+VITE_SUPABASE_URL=sua_url_do_supabase
+VITE_SUPABASE_ANON_KEY=sua_chave_anon
+VITE_ADMIN_PASSWORD=senha_admin
+```
+
+5. Execute o projeto em modo de desenvolvimento
+
+```bash
+npm run dev
+```
+
+6. Acesse `http://localhost:5173` no seu navegador
+
+### Deploy
+
+Siga as instruções no arquivo `DEPLOY_VERCEL.md` para fazer o deploy do projeto na Vercel.
+
+## Contribuição
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou enviar pull requests.
+
+## Licença
+
+Este projeto está licenciado sob a Licença MIT - veja o arquivo LICENSE para detalhes.
+
+## Agradecimentos
+
+- Inspirado no jogo "Cards Against Humanity"
+- Construído com React, TypeScript, Tailwind CSS, Shadcn UI
+- Banco de dados e autenticação com Supabase
+- Hospedagem com Vercel
 
 ## Desenvolvimento
 

@@ -1,297 +1,212 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import Layout from "@/components/Layout";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { useGame } from "@/contexts/GameContext";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Search, Lock, Users, User, RefreshCw, ArrowLeft } from "lucide-react";
+import { useGame } from "@/contexts/GameContext";
+import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Lock, Users } from "lucide-react";
+import * as roomService from "@/services/roomService";
 
-// Room type definition
-interface Room {
+interface RoomListItem {
   id: string;
   name: string;
-  hasPassword: boolean;
-  currentPlayers: number;
+  players: number;
   maxPlayers: number;
-  createdAt: Date;
+  hasPassword: boolean;
 }
 
-// Check if a player is a fake/bot player
-const isFakePlayer = (playerName: string): boolean => {
-  // Define patterns for identifying fake players
-  // Keep this in sync with the same function in GameContext.tsx
-  const fakePatterns = [
-    /^test/i, // Names starting with "test"
-    /^bot/i, // Names starting with "bot"
-    /^fake/i, // Names starting with "fake"
-    /^player\d+$/i, // Names like "player1", "player2"
-    /^jogador\d+$/i, // Names like "jogador1", "jogador2"
-  ];
-
-  return fakePatterns.some((pattern) => pattern.test(playerName));
-};
-
 const FindRooms = () => {
+  const { joinRoom } = useGame();
+  const [password, setPassword] = useState("");
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rooms, setRooms] = useState<RoomListItem[]>([]);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { joinRoom, playerName, rooms } = useGame();
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [selectedRoomId, setSelectedRoomId] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  // Carregar lista de salas disponíveis
+  useEffect(() => {
+    const fetchRooms = async () => {
+      setLoading(true);
+      try {
+        const roomsList = await roomService.getRoomsList();
+        setRooms(roomsList);
+      } catch (error) {
+        console.error("Erro ao buscar salas:", error);
+        toast({
+          title: "Erro",
+          description:
+            "Não foi possível carregar a lista de salas disponíveis.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Filter rooms based on search term and only show rooms with real players
-  const filteredRooms = Object.values(rooms)
-    .filter((room) => {
-      // Filter by search term
-      const matchesSearch = room.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+    fetchRooms();
 
-      // Only show rooms that have at least one real player
-      const hasRealPlayer = room.players.some(
-        (player) => !isFakePlayer(player.name)
-      );
+    // Atualizar a lista a cada 10 segundos
+    const interval = setInterval(fetchRooms, 10000);
+    return () => clearInterval(interval);
+  }, [toast]);
 
-      return matchesSearch && hasRealPlayer;
-    })
-    .sort((a, b) => {
-      // Sort by creation date (newest first)
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+  const handleJoinRoom = async () => {
+    if (!selectedRoomId) return;
 
-  // Handle joining a room
-  const handleJoinRoom = (roomId: string, requiresPassword: boolean) => {
-    if (requiresPassword) {
-      setSelectedRoomId(roomId);
-      setShowPasswordDialog(true);
-    } else {
-      joinRoomWithPassword(roomId, "");
+    const success = await joinRoom(selectedRoomId, password);
+    if (success) {
+      navigate(`/room/${selectedRoomId}`);
     }
+
+    // Resetar valores
+    setSelectedRoomId(null);
+    setPassword("");
+    setShowPassword(false);
   };
 
-  // Join a room with password (if needed)
-  const joinRoomWithPassword = (roomId: string, roomPassword: string) => {
-    // In a real app, you would check the password on the server
-    if (!playerName) {
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      const roomsList = await roomService.getRoomsList();
+      setRooms(roomsList);
       toast({
-        title: "Nome obrigatório",
-        description: "Por favor, retorne e digite seu apelido para continuar",
+        title: "Lista atualizada",
+        description: "A lista de salas foi atualizada.",
       });
-      navigate("/");
-      return;
-    }
-
-    const success = joinRoom(roomId, roomPassword);
-    if (success) {
-      navigate(`/room/${roomId}`);
-    } else {
+    } catch (error) {
+      console.error("Erro ao atualizar salas:", error);
       toast({
-        title: "Erro ao entrar na sala",
-        description:
-          "Não foi possível entrar na sala. Verifique a senha ou tente novamente mais tarde.",
+        title: "Erro",
+        description: "Não foi possível atualizar a lista de salas.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
-  };
-
-  // Handle password submission
-  const handlePasswordSubmit = () => {
-    if (!password.trim()) {
-      toast({
-        title: "Senha obrigatória",
-        description: "Por favor, digite a senha da sala",
-      });
-      return;
-    }
-
-    joinRoomWithPassword(selectedRoomId, password);
-    setShowPasswordDialog(false);
-    setPassword("");
-  };
-
-  // Get time difference in a human readable format
-  const getTimeDiff = (isoDate: string): string => {
-    const date = new Date(isoDate);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.round(diffMs / 60000);
-
-    if (diffMins < 1) return "agora mesmo";
-    if (diffMins === 1) return "1 minuto atrás";
-    if (diffMins < 60) return `${diffMins} minutos atrás`;
-
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours === 1) return "1 hora atrás";
-    if (diffHours < 24) return `${diffHours} horas atrás`;
-
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays === 1) return "1 dia atrás";
-    return `${diffDays} dias atrás`;
-  };
-
-  // Calculate real players count (excluding fake/bot players)
-  const getRealPlayersCount = (room: (typeof filteredRooms)[0]) => {
-    return room.players.filter((player) => !isFakePlayer(player.name)).length;
   };
 
   return (
-    <Layout>
-      <div className="max-w-6xl mx-auto py-6 px-4 space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Encontrar Partidas</h1>
-          <Button
-            onClick={() => navigate("/")}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
+    <div className="container mx-auto p-4 max-w-4xl">
+      <h1 className="text-2xl font-bold mb-6">Encontrar Salas</h1>
 
-        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar sala pelo nome..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-sm text-muted-foreground">
+          {rooms.length}{" "}
+          {rooms.length === 1 ? "sala disponível" : "salas disponíveis"}
+        </p>
+        <Button onClick={handleRefresh} disabled={loading}>
+          {loading ? "Atualizando..." : "Atualizar Lista"}
+        </Button>
+      </div>
 
-        {isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          </div>
-        ) : filteredRooms.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-lg text-muted-foreground">
-              {searchTerm
-                ? "Nenhuma sala encontrada com este nome"
-                : "Nenhuma sala disponível no momento"}
-            </p>
-            <Button
-              onClick={() => navigate("/create-room")}
-              variant="default"
-              className="mt-4"
-            >
-              Criar uma nova sala
-            </Button>
+      <div className="space-y-4">
+        {rooms.length === 0 ? (
+          <div className="text-center p-10 border rounded-lg bg-muted/30">
+            {loading ? (
+              <p>Buscando salas disponíveis...</p>
+            ) : (
+              <p>Não há salas disponíveis no momento. Que tal criar uma?</p>
+            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredRooms.map((room) => (
-              <Card key={room.id} className="overflow-hidden">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">{room.name}</CardTitle>
-                    {room.hasPassword && (
-                      <Badge variant="outline" className="flex items-center">
-                        <Lock className="h-3 w-3 mr-1" />
-                        Protegida
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-0">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-sm">
-                      <div className="flex items-center">
-                        <Users className="h-4 w-4 mr-1 text-muted-foreground" />
-                        <span>Limite: {room.maxPlayers} jogadores</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        Criada {getTimeDiff(room.createdAt)}
-                      </span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2.5">
-                      <div
-                        className="bg-primary h-2.5 rounded-full transition-all duration-500"
-                        style={{
-                          width: `${Math.min(
-                            (getRealPlayersCount(room) / room.maxPlayers) * 100,
-                            100
-                          )}%`,
-                        }}
-                      ></div>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <User className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span>
-                        {getRealPlayersCount(room)} de {room.maxPlayers}{" "}
-                        jogadores
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-4">
-                  <Button
-                    onClick={() => handleJoinRoom(room.id, room.hasPassword)}
-                    className="w-full"
-                    variant="default"
-                  >
-                    {room.hasPassword ? "Entrar com senha" : "Entrar na sala"}
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+          rooms.map((room) => (
+            <div
+              key={room.id}
+              className="border rounded-lg p-4 flex justify-between items-center hover:bg-accent/10 transition-colors"
+            >
+              <div>
+                <h3 className="font-medium flex items-center">
+                  {room.name}
+                  {room.hasPassword && (
+                    <Lock className="ml-2 h-4 w-4 text-orange-500" />
+                  )}
+                </h3>
+                <div className="flex items-center text-sm text-muted-foreground mt-1">
+                  <Users className="mr-1 h-4 w-4" />
+                  <span>
+                    {room.players}/{room.maxPlayers} jogadores
+                  </span>
+                </div>
+              </div>
+              <Button
+                onClick={() => setSelectedRoomId(room.id)}
+                disabled={room.players >= room.maxPlayers}
+              >
+                {room.players >= room.maxPlayers ? "Sala Cheia" : "Entrar"}
+              </Button>
+            </div>
+          ))
         )}
       </div>
 
-      {/* Password Dialog */}
-      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+      <Dialog
+        open={selectedRoomId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedRoomId(null);
+            setPassword("");
+            setShowPassword(false);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Senha da sala</DialogTitle>
+            <DialogTitle>Entrar na sala</DialogTitle>
+            <DialogDescription>
+              {rooms.find((r) => r.id === selectedRoomId)?.hasPassword
+                ? "Esta sala requer uma senha para entrar."
+                : "Você está prestes a entrar nesta sala."}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              Esta sala é protegida. Digite a senha para entrar:
-            </p>
-            <Input
-              type="password"
-              placeholder="Digite a senha..."
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+
+          {rooms.find((r) => r.id === selectedRoomId)?.hasPassword && (
+            <div className="space-y-2 py-4">
+              <label htmlFor="password" className="text-sm font-medium">
+                Senha da sala
+              </label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-10"
+                  placeholder="Digite a senha da sala"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowPasswordDialog(false);
-                setPassword("");
-              }}
-            >
+            <Button variant="secondary" onClick={() => setSelectedRoomId(null)}>
               Cancelar
             </Button>
-            <Button onClick={handlePasswordSubmit}>Entrar</Button>
+            <Button onClick={handleJoinRoom}>Entrar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </div>
   );
 };
 
