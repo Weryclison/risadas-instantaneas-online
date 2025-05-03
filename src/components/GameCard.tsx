@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import React from "react";
 
@@ -24,7 +23,7 @@ const GameCard: React.FC<GameCardProps> = ({
       className={cn(
         type === "black" ? "black-card" : "white-card",
         selectable && "cursor-pointer hover:shadow-lg transition-shadow",
-        selected && "ring-2 ring-game-highlight transform scale-105",
+        selected && "ring-2 ring-primary selected-card",
         "animate-fade-in",
         className
       )}
