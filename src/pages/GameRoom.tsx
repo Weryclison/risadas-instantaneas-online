@@ -203,8 +203,27 @@ const GameRoom = () => {
   // Submit judge's final decision
   const handleJudgeSubmit = () => {
     if (judgeSelection === null) return;
-    submitJudgement(judgeSelection);
-    setJudgeSelection(null);
+
+    // Mostrar efeito visual na carta selecionada
+    const selectedCard = currentRoom.playedCards[judgeSelection];
+
+    // Temporariamente marcamos a carta como vencedora para mostrar o efeito visual
+    if (selectedCard) {
+      // @ts-ignore - Adicionando temporariamente a propriedade
+      selectedCard.isWinner = true;
+
+      // Forçar re-render para mostrar o efeito visual
+      setJudgeSelection(judgeSelection);
+
+      // Aguardar 1 segundo para o efeito visual
+      setTimeout(() => {
+        submitJudgement(judgeSelection);
+        setJudgeSelection(null);
+      }, 1000);
+    } else {
+      submitJudgement(judgeSelection);
+      setJudgeSelection(null);
+    }
   };
 
   // Add a test player to the room
@@ -344,41 +363,35 @@ const GameRoom = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Column - Players and Controls */}
-          <div className="space-y-4 order-2 lg:order-1">
-            <div className="bg-card rounded-lg p-4 shadow">
-              <h2 className="text-xl font-semibold mb-3">Jogadores</h2>
-              <div className="space-y-2">
-                {currentRoom.players.map((player) => renderPlayerBadge(player))}
-              </div>
+        {/* Main Game Area with 12 column grid */}
+        <div className="grid grid-cols-12 gap-4">
+          {/* Left Column - Black Card (3 cols) */}
+          <div className="col-span-12 md:col-span-3 space-y-4">
+            <div className="bg-card p-6 rounded-lg shadow-lg">
+              <h2 className="text-xl font-semibold mb-4">Carta da Rodada</h2>
 
-              {/* Add Test Player Form */}
-              <div className="mt-4 pt-4 border-t">
-                <h3 className="text-sm font-medium mb-2">
-                  Adicionar Jogador de Teste
-                </h3>
-                <div className="flex space-x-2">
-                  <Input
-                    placeholder="Nome do jogador"
-                    value={testPlayerName}
-                    onChange={(e) => setTestPlayerName(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleAddTestPlayer}
-                    disabled={
-                      currentRoom.players.length >= currentRoom.maxPlayers
-                    }
-                  >
-                    <UserPlus className="h-4 w-4" />
-                  </Button>
+              {currentRoom.status === "waiting" ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-muted/20 rounded-lg">
+                  <p className="text-center text-muted-foreground">
+                    O jogo ainda não começou. Clique em "Iniciar Jogo" quando
+                    todos estiverem prontos.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Para testes locais apenas
-                </p>
-              </div>
+              ) : (
+                <div className="flex justify-center">
+                  {currentRoom.currentBlackCard ? (
+                    <GameCard
+                      text={currentRoom.currentBlackCard.text}
+                      type="black"
+                      className="max-w-md"
+                    />
+                  ) : (
+                    <p className="text-muted-foreground">
+                      Nenhuma carta disponível
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Game Controls */}
@@ -421,31 +434,37 @@ const GameRoom = () => {
                     </p>
                   </div>
 
+                  {/* Card Selection Confirmation Dialog */}
                   {pendingCard && !hasPlayedCard && !isJudge && (
-                    <div className="border p-3 rounded-md bg-muted/30">
-                      <h3 className="text-sm font-medium mb-2">
-                        Confirmar jogada:
-                      </h3>
-                      <p className="text-sm mb-3">"{pendingCard.text}"</p>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={confirmCardSelection}
-                          className="flex-1"
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Confirmar
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={cancelCardSelection}
-                          className="flex-1"
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Cancelar
-                        </Button>
+                    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                      <div className="bg-black border-2 border-red-500 shadow-xl rounded-lg p-6 max-w-md w-full">
+                        <h3 className="text-xl font-bold mb-4 text-white">
+                          Confirmar jogada
+                        </h3>
+                        <p className="mb-4 text-white">
+                          Tem certeza que deseja jogar esta carta?
+                        </p>
+
+                        <div className="flex justify-center mb-6">
+                          <GameCard text={pendingCard.text} type="white" />
+                        </div>
+
+                        <div className="flex space-x-3 justify-end">
+                          <Button
+                            variant="outline"
+                            onClick={cancelCardSelection}
+                            className="bg-transparent text-white border-white hover:bg-slate-800"
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            variant="default"
+                            onClick={confirmCardSelection}
+                            className="bg-purple-600 hover:bg-purple-700 text-white"
+                          >
+                            Confirmar
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -460,9 +479,14 @@ const GameRoom = () => {
                     jogadas.
                   </p>
                   {judgeSelection !== null && (
-                    <Button className="w-full" onClick={handleJudgeSubmit}>
-                      Confirmar Seleção
-                    </Button>
+                    <div className="mt-4 flex justify-center">
+                      <Button
+                        className="w-full max-w-md"
+                        onClick={handleJudgeSubmit}
+                      >
+                        Confirmar Seleção
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}
@@ -495,92 +519,146 @@ const GameRoom = () => {
             </div>
           </div>
 
-          {/* Center Column - Game Content */}
-          <div className="lg:col-span-3 space-y-6 order-1 lg:order-2">
-            {/* Black Card Section */}
-            <div className="bg-card p-6 rounded-lg shadow-lg">
-              <h2 className="text-xl font-semibold mb-4">Carta da Rodada</h2>
-
-              {currentRoom.status === "waiting" ? (
-                <div className="flex flex-col items-center justify-center p-8 bg-muted/20 rounded-lg">
-                  <p className="text-center text-muted-foreground">
-                    O jogo ainda não começou. Clique em "Iniciar Jogo" quando
-                    todos estiverem prontos.
-                  </p>
-                </div>
-              ) : (
-                <div className="flex justify-center">
-                  {currentRoom.currentBlackCard ? (
-                    <GameCard
-                      text={currentRoom.currentBlackCard.text}
-                      type="black"
-                      className="max-w-md"
-                    />
-                  ) : (
-                    <p className="text-muted-foreground">
-                      Nenhuma carta disponível
-                    </p>
-                  )}
-                </div>
-              )}
+          {/* Separator (visible on md screens and above) */}
+          <div className="hidden md:block md:col-span-1">
+            <div className="h-full flex justify-center">
+              <Separator orientation="vertical" className="h-full" />
             </div>
+          </div>
 
-            {/* Judge Selection Area */}
-            {currentRoom.status === "judging" && (
+          {/* Right Column - Player Cards (8 cols) */}
+          <div className="col-span-12 md:col-span-8 space-y-6">
+            {/* Área reservada para cartas enviadas - sempre visível durante o jogo */}
+            {currentRoom.status !== "waiting" && (
               <div className="bg-card p-6 rounded-lg shadow">
                 <h2 className="text-xl font-semibold mb-4">
-                  {isJudge
-                    ? "Escolha a melhor resposta:"
-                    : "Respostas dos jogadores (o juiz está decidindo):"}
+                  {currentRoom.status === "judging"
+                    ? isJudge
+                      ? "Escolha a melhor resposta:"
+                      : "Respostas dos jogadores (o juiz está decidindo):"
+                    : "Cartas Enviadas"}
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {currentRoom.playedCards.map((playedCard, index) => (
-                    <div
-                      key={index}
-                      className={`cursor-pointer transition-all transform ${
-                        isJudge ? "hover:scale-105" : ""
-                      } ${
-                        judgeSelection === index
-                          ? "ring-4 ring-primary ring-offset-2"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        isJudge ? handleJudgeSelection(index) : null
+                {currentRoom.playedCards.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {currentRoom.playedCards.map((playedCard, index) => {
+                      const isCurrentPlayerCard =
+                        playedCard.playerId === currentPlayer?.id;
+                      // Verificar se esta carta foi a vencedora (quando existir esta propriedade)
+                      const isWinner = Boolean(
+                        // @ts-ignore - lidando com propriedade que pode ser adicionada depois
+                        playedCard.isWinner
+                      );
+
+                      // Durante a fase de julgamento, mostrar todas as cartas
+                      if (currentRoom.status === "judging") {
+                        return (
+                          <div
+                            key={index}
+                            className={`cursor-pointer transition-all transform ${
+                              isJudge ? "hover:scale-105" : ""
+                            } ${
+                              judgeSelection === index
+                                ? "ring-4 ring-primary ring-offset-2"
+                                : ""
+                            }`}
+                            onClick={() =>
+                              isJudge ? handleJudgeSelection(index) : null
+                            }
+                          >
+                            <GameCard
+                              text={playedCard.card.text}
+                              type="white"
+                              winner={isWinner}
+                              footerText={isJudge ? `Carta ${index + 1}` : ""}
+                            />
+                          </div>
+                        );
+                      } else {
+                        // Durante a fase de jogo, mostrar cartas face-down para outros jogadores
+                        return (
+                          <div key={index} className="flex justify-center">
+                            <GameCard
+                              text={playedCard.card.text}
+                              type="white"
+                              footerText=""
+                              faceDown={!isCurrentPlayerCard}
+                            />
+                          </div>
+                        );
                       }
-                    >
-                      <GameCard
-                        text={playedCard.card.text}
-                        type="white"
-                        // When judging is complete, show player names
-                        footerText={
-                          currentRoom.status === "finished"
-                            ? playedCard.playerName
-                            : isJudge
-                            ? `Carta ${index + 1}`
-                            : ""
-                        }
-                      />
+                    })}
+                  </div>
+                ) : (
+                  // Espaços reservados para cartas - quando nenhuma carta foi jogada ainda
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {Array.from({
+                      length: currentRoom.players.filter((p) => !p.isJudge)
+                        .length,
+                    }).map((_, index) => (
+                      <div key={index} className="flex justify-center">
+                        <div className="border border-dashed border-slate-300 rounded-lg h-36 w-full flex items-center justify-center bg-slate-100/10">
+                          {/* Sem texto, apenas o espaço reservado */}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Botão de confirmação para o juiz */}
+                {currentRoom.status === "judging" &&
+                  isJudge &&
+                  judgeSelection !== null && (
+                    <div className="mt-4 flex justify-center">
+                      <Button
+                        className="w-full max-w-md"
+                        onClick={handleJudgeSubmit}
+                      >
+                        Confirmar Seleção
+                      </Button>
                     </div>
-                  ))}
-                </div>
+                  )}
               </div>
             )}
 
             {/* Player's Hand */}
             {(currentRoom.status === "playing" ||
               currentRoom.status === "judging") &&
-              !isJudge &&
               currentPlayer && (
                 <div className="bg-card p-6 rounded-lg shadow">
-                  <h2 className="text-xl font-semibold mb-4">Sua Mão</h2>
+                  <h2 className="text-xl font-semibold mb-4">
+                    {isJudge ? "Sua Mão" : "Sua Mão"}
+                  </h2>
 
-                  {currentPlayer.cards.length === 0 ? (
+                  {isJudge ? (
+                    // Mostrar cartas do juiz com um overlay centralizado
+                    <div className="relative">
+                      {/* Overlay centralizado para o juiz */}
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-lg">
+                        <div className="bg-black/80 text-white px-6 py-3 rounded-lg text-lg font-medium">
+                          Você é o juiz desta rodada
+                        </div>
+                      </div>
+
+                      {/* Cartas do juiz */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {currentPlayer.cards.map((card) => (
+                          <div key={card.id}>
+                            <GameCard
+                              text={card.text}
+                              type="white"
+                              disabled={true}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : currentPlayer.cards.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">
                       Você não tem cartas na mão
                     </p>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {currentPlayer.cards.map((card) => (
                         <div
                           key={card.id}
@@ -603,7 +681,7 @@ const GameRoom = () => {
                             text={card.text}
                             type="white"
                             disabled={
-                              hasPlayedCard || currentRoom.status === "judging"
+                              hasPlayedCard || currentRoom.status !== "playing"
                             }
                           />
                         </div>
@@ -612,6 +690,39 @@ const GameRoom = () => {
                   )}
                 </div>
               )}
+          </div>
+        </div>
+
+        {/* Players List (moved to bottom) */}
+        <div className="bg-card rounded-lg p-4 shadow mt-6">
+          <h2 className="text-xl font-semibold mb-3">Jogadores</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {currentRoom.players.map((player) => renderPlayerBadge(player))}
+          </div>
+
+          {/* Add Test Player Form */}
+          <div className="mt-4 pt-4 border-t">
+            <h3 className="text-sm font-medium mb-2">
+              Adicionar Jogador de Teste
+            </h3>
+            <div className="flex space-x-2">
+              <Input
+                placeholder="Nome do jogador"
+                value={testPlayerName}
+                onChange={(e) => setTestPlayerName(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                size="sm"
+                onClick={handleAddTestPlayer}
+                disabled={currentRoom.players.length >= currentRoom.maxPlayers}
+              >
+                <UserPlus className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Para testes locais apenas
+            </p>
           </div>
         </div>
       </div>
