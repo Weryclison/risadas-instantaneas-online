@@ -115,7 +115,8 @@ const createNewRoom = (
   password: string = "",
   maxPlayers: number = 8
 ): GameRoom => {
-  const roomId = uuidv4().slice(0, 6);
+  // Use um UUID completo para evitar problemas com o Supabase
+  const roomId = uuidv4();
   const player = createPlayer(playerName, true);
 
   // Combine all decks for this prototype

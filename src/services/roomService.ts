@@ -47,6 +47,7 @@ export async function getRoom(roomId: string): Promise<GameRoom | null> {
 // Criar uma nova sala
 export async function createRoom(room: GameRoom): Promise<boolean> {
   try {
+    console.log("Tentando criar sala:", room);
     const { error } = await supabase.from("rooms").insert({
       id: room.id,
       name: room.name,
@@ -54,7 +55,10 @@ export async function createRoom(room: GameRoom): Promise<boolean> {
       is_active: true,
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erro detalhado ao criar sala:", error);
+      throw error;
+    }
     return true;
   } catch (error) {
     console.error("Erro ao criar sala:", error);
