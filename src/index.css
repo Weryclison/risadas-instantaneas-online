@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -95,13 +94,71 @@
 }
 
 .black-card {
-  @apply bg-game-black-card text-white rounded-md p-5 h-52 flex items-center justify-center;
+  @apply bg-game-black-card text-white rounded-md p-5 h-52 flex items-center justify-center shadow-md border-2 border-gray-800;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
 }
 
 .white-card {
-  @apply bg-game-white-card text-black rounded-md p-5 h-52 flex items-center justify-center;
+  @apply bg-game-white-card text-black rounded-md p-5 h-52 flex items-center justify-center shadow-sm border border-gray-300;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
 }
 
 .card-text {
   @apply font-medium text-lg;
+}
+
+/* Efeito para cartas selecionadas */
+.selected-card {
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+/* Estilos para cartas na fase de julgamento */
+.card-back {
+  @apply bg-secondary border border-gray-300 text-transparent rounded-md p-5 h-52 flex items-center justify-center;
+  background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Novo layout de jogo */
+.game-layout {
+  @apply grid grid-cols-1 md:grid-cols-12 gap-0 md:gap-2 mt-6;
+}
+
+.game-question {
+  @apply md:col-span-3 space-y-4;
+}
+
+.game-answers {
+  @apply md:col-span-8 space-y-4;
+}
+
+/* Título da seção de respostas */
+.answers-title {
+  @apply text-lg font-medium mb-3;
+  margin-top: 0;
+  padding-left: 0;
+}
+
+/* Container do separador */
+.separator-container {
+  @apply hidden md:flex md:col-span-1 items-start justify-center;
+  padding-top: 2.7rem; /* Ajuste para alinhar com os títulos */
+  height: 100%;
+}
+
+/* Estilo para as cartas de resposta */
+.answer-cards-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+}
+
+/* Badge de carta própria */
+.card-badge {
+  @apply absolute top-2 left-2 px-2 py-1 text-xs rounded-full bg-secondary/80 shadow-sm;
+}
+
+/* Linha separadora vertical */
+.vertical-separator {
+  height: calc(100% - 2.7rem); /* Altura total menos o padding-top */
+  width: 1px;
+  @apply bg-border;
 }

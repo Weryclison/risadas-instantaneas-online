@@ -56,13 +56,22 @@ export interface GameRoom {
   status: GameStatus;
   createdAt: string;
   winner: Player | null;
+  hasPassword: boolean;
+  password: string;
+  maxPlayers: number;
 }
 
 // Tipos para eventos do Socket.IO
 export interface SocketEvents {
   // Eventos do cliente para o servidor
-  createRoom: { name: string; playerName: string };
-  joinRoom: { roomId: string; playerName: string };
+  createRoom: {
+    name: string;
+    playerName: string;
+    hasPassword: boolean;
+    password: string;
+    maxPlayers: number;
+  };
+  joinRoom: { roomId: string; playerName: string; password?: string };
   leaveRoom: { roomId: string; playerId: string };
   startGame: { roomId: string };
   playCard: { roomId: string; playerId: string; card: WhiteCard };
