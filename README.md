@@ -202,4 +202,5 @@ MIT
 
 ## Autores
 
-- [Seu Nome]
+- Weryclison Nandi
+  
