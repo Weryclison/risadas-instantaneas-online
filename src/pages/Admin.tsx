@@ -127,10 +127,6 @@ const Admin = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Digite a senha de administrador"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Use "admin123" para acessar o painel (apenas para
-                  demonstração)
-                </p>
               </div>
               <Button onClick={handleLogin}>Entrar</Button>
             </div>

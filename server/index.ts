@@ -19,6 +19,10 @@ const io = new Server(httpServer, {
 
 // Armazenamento em memória (em produção, use um banco de dados)
 const rooms: Record<string, GameRoom> = {};
+// Armazenamento para registrar a última atividade nas salas
+const roomLastActivity: Record<string, number> = {};
+// Tempo limite de inatividade (1 hora em milissegundos)
+const ROOM_INACTIVITY_TIMEOUT = 60 * 60 * 1000; // 1 hora
 
 // Função para criar um novo jogador
 const createPlayer = (name: string, isJudge: boolean = false): Player => ({
@@ -65,8 +69,47 @@ const createRoom = (name: string, playerName: string): GameRoom => {
   };
 
   rooms[roomId] = room;
+  // Registrar a atividade inicial da sala
+  updateRoomActivity(roomId);
   return room;
 };
+
+// Função para atualizar o timestamp de última atividade da sala
+const updateRoomActivity = (roomId: string): void => {
+  roomLastActivity[roomId] = Date.now();
+};
+
+// Função para verificar e remover salas inativas
+const checkInactiveRooms = (): void => {
+  const now = Date.now();
+  Object.keys(rooms).forEach((roomId) => {
+    const lastActivity = roomLastActivity[roomId] || 0;
+    const timeSinceLastActivity = now - lastActivity;
+
+    if (timeSinceLastActivity >= ROOM_INACTIVITY_TIMEOUT) {
+      console.log(
+        `Sala ${roomId} removida por inatividade (${
+          timeSinceLastActivity / 1000 / 60
+        } minutos)`
+      );
+
+      // Notifica os jogadores antes de remover a sala
+      if (rooms[roomId]) {
+        io.to(roomId).emit("roomClosed", {
+          message:
+            "Esta sala foi fechada devido à inatividade por mais de 1 hora.",
+        });
+      }
+
+      // Remove a sala
+      delete rooms[roomId];
+      delete roomLastActivity[roomId];
+    }
+  });
+};
+
+// Verificar salas inativas a cada 15 minutos
+setInterval(checkInactiveRooms, 15 * 60 * 1000);
 
 // Função para distribuir cartas
 const dealCards = (room: GameRoom) => {
@@ -96,6 +139,7 @@ io.on("connection", (socket) => {
     socket.join(room.id);
     socket.emit("roomCreated", room);
     io.to(room.id).emit("roomUpdated", room);
+    // A função createRoom já registra a atividade inicial
   });
 
   // Entrar em uma sala existente
@@ -114,6 +158,7 @@ io.on("connection", (socket) => {
     const player = createPlayer(playerName);
     room.players.push(player);
     socket.join(roomId);
+    updateRoomActivity(roomId); // Registra atividade na sala
     io.to(roomId).emit("roomUpdated", room);
   });
 
@@ -127,6 +172,7 @@ io.on("connection", (socket) => {
 
     const updatedRoom = dealCards(room);
     rooms[roomId] = updatedRoom;
+    updateRoomActivity(roomId); // Registra atividade na sala
     io.to(roomId).emit("roomUpdated", updatedRoom);
   });
 
@@ -154,6 +200,7 @@ io.on("connection", (socket) => {
     }
 
     rooms[roomId] = room;
+    updateRoomActivity(roomId); // Registra atividade na sala
     io.to(roomId).emit("roomUpdated", room);
   });
 
@@ -191,6 +238,7 @@ io.on("connection", (socket) => {
     }
 
     rooms[roomId] = room;
+    updateRoomActivity(roomId); // Registra atividade na sala
     io.to(roomId).emit("roomUpdated", room);
   });
 
@@ -202,8 +250,10 @@ io.on("connection", (socket) => {
     room.players = room.players.filter((p) => p.id !== playerId);
     if (room.players.length === 0) {
       delete rooms[roomId];
+      delete roomLastActivity[roomId]; // Remove também o registro de atividade
     } else {
       rooms[roomId] = room;
+      updateRoomActivity(roomId); // Registra atividade na sala
       io.to(roomId).emit("roomUpdated", room);
     }
   });
@@ -214,7 +264,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });

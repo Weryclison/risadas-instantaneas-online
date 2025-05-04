@@ -18,6 +18,7 @@ import { defaultDecks } from "@/data/decks";
 import { v4 as uuidv4 } from "uuid";
 import * as deckService from "@/services/deckService";
 import * as roomService from "@/services/roomService";
+import socketService from "@/services/socketService";
 
 interface GameContextType {
   playerName: string;
@@ -108,56 +109,21 @@ const createPlayer = (name: string, isJudge: boolean = false): Player => ({
   cards: [],
 });
 
-const createNewRoom = (
-  name: string,
-  playerName: string,
-  hasPassword: boolean = false,
-  password: string = "",
-  maxPlayers: number = 8
-): GameRoom => {
-  // Use um UUID completo para evitar problemas com o Supabase
-  const roomId = uuidv4();
-  const player = createPlayer(playerName, true);
-
-  // Combine all decks for this prototype
-  let allWhiteCards: WhiteCard[] = [];
-  let allBlackCards: BlackCard[] = [];
-
-  defaultDecks.forEach((deck) => {
-    allWhiteCards = [...allWhiteCards, ...deck.whiteCards];
-    allBlackCards = [...allBlackCards, ...deck.blackCards];
-  });
-
-  // Shuffle cards
-  const shuffledWhiteCards = [...allWhiteCards].sort(() => Math.random() - 0.5);
-  const shuffledBlackCards = [...allBlackCards].sort(() => Math.random() - 0.5);
-
-  return {
-    id: roomId,
-    name: name || `Sala de ${playerName}`,
-    players: [player],
-    currentJudgeIndex: 0,
-    currentBlackCard: null,
-    playedCards: [],
-    whiteCardDeck: shuffledWhiteCards,
-    blackCardDeck: shuffledBlackCards,
-    round: 0,
-    maxRounds: 10,
-    status: "waiting",
-    createdAt: new Date().toISOString(),
-    winner: null,
-    hasPassword,
-    password,
-    maxPlayers,
-  };
-};
-
 const dealCardsToPlayers = (room: GameRoom): GameRoom => {
   const updatedRoom = { ...room };
 
   // Deal 7 cards to each player
   updatedRoom.players = updatedRoom.players.map((player) => {
+    // Get 7 cards from the white card deck
     const cards = updatedRoom.whiteCardDeck.splice(0, 7);
+
+    // Check if we got enough cards
+    if (cards.length < 7) {
+      console.warn(
+        `Not enough cards in the deck. Player ${player.name} received ${cards.length} of 7 cards.`
+      );
+    }
+
     return { ...player, cards };
   });
 
@@ -186,7 +152,7 @@ const isFakePlayer = (playerName: string): boolean => {
 
 export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const { toast } = useToast();
-  const [playerName, setPlayerName] = useState("");
+  const [playerName, setPlayerNameInternal] = useState("");
   const [currentRoom, setCurrentRoom] = useState<GameRoom | null>(null);
   const [decks, setDecks] = useState<Deck[]>(defaultDecks);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -199,8 +165,106 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   );
   const [isLoading, setIsLoading] = useState(true);
 
+  // Custom setter for playerName that includes validation
+  const setPlayerName = (name: string) => {
+    // Trim the name to remove extra spaces
+    const trimmedName = name.trim();
+
+    // Enforce minimum name length for game functionality
+    // But allow empty names for initialization and reset scenarios
+    if (trimmedName && trimmedName.length < 3) {
+      // Don't show toast here, as validation is handled in UI components
+      console.warn("PlayerName must be at least 3 characters long");
+      return;
+    }
+
+    // Only update if it's an actual change
+    if (trimmedName !== playerName) {
+      setPlayerNameInternal(trimmedName);
+    }
+  };
+
   // Referência para a função de cancelamento da inscrição
   const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Initialize socket service
+  useEffect(() => {
+    // Initialize the socket connection
+    socketService.initialize();
+
+    // Set up event listeners
+    socketService.on("roomClosed", handleRoomClosed);
+
+    // Clean up on unmount
+    return () => {
+      socketService.off("roomClosed");
+      socketService.close();
+    };
+  }, []);
+
+  // Função para lidar com salas fechadas pelo servidor
+  const handleRoomClosed = (data: { message: string }) => {
+    toast({
+      title: "Sala fechada",
+      description: data.message,
+      variant: "destructive",
+    });
+
+    // Removing the current room if it's the one being closed
+    if (currentRoom) {
+      setCurrentRoom(null);
+    }
+  };
+
+  // Função para criar uma nova sala, agora dentro do componente para acessar o estado decks
+  const createNewRoom = (
+    name: string,
+    playerName: string,
+    hasPassword: boolean = false,
+    password: string = "",
+    maxPlayers: number = 8
+  ): GameRoom => {
+    // Use um UUID completo para evitar problemas com o Supabase
+    const roomId = uuidv4();
+    const player = createPlayer(playerName, true);
+
+    // Combine all decks for this prototype
+    let allWhiteCards: WhiteCard[] = [];
+    let allBlackCards: BlackCard[] = [];
+
+    // Use decks from state instead of defaultDecks
+    decks.forEach((deck) => {
+      allWhiteCards = [...allWhiteCards, ...deck.whiteCards];
+      allBlackCards = [...allBlackCards, ...deck.blackCards];
+    });
+
+    // Shuffle cards
+    const shuffledWhiteCards = [...allWhiteCards].sort(
+      () => Math.random() - 0.5
+    );
+    const shuffledBlackCards = [...allBlackCards].sort(
+      () => Math.random() - 0.5
+    );
+
+    return {
+      id: roomId,
+      name: name || `Sala de ${playerName}`,
+      players: [player],
+      currentJudgeIndex: 0,
+      currentBlackCard: null,
+      playedCards: [],
+      whiteCardDeck: shuffledWhiteCards,
+      blackCardDeck: shuffledBlackCards,
+      round: 0,
+      maxRounds: 10,
+      status: "waiting",
+      createdAt: new Date().toISOString(),
+      winner: null,
+      hasPassword,
+      password,
+      maxPlayers,
+    };
+  };
 
   // Carregar baralhos do banco de dados
   useEffect(() => {
@@ -375,6 +439,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       return null;
     }
 
+    // Usar a função createNewRoom que está dentro do componente
     const newRoom = createNewRoom(
       name,
       playerName,
@@ -673,6 +738,19 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         (c) => c.id !== card.id
       );
 
+      // If player will have no cards after playing, draw a new one immediately
+      if (updatedRoom.players[playerIndex].cards.length === 0) {
+        // Draw a new card from the deck
+        const newCard = updatedRoom.whiteCardDeck.shift();
+        if (newCard) {
+          updatedRoom.players[playerIndex].cards.push(newCard);
+        } else {
+          console.warn(
+            `Unable to draw a new card for player ${player.name}. The white card deck is empty.`
+          );
+        }
+      }
+
       // Add the played card
       updatedRoom.playedCards.push({
         card,
@@ -748,14 +826,27 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
 
       // Prepare for next round
-      // Draw a new card for each player
+      // Draw new cards to ensure each player has exactly 7 cards
       updatedRoom.players = updatedRoom.players.map((player) => {
-        if (!player.isJudge && player.cards.length < 7) {
-          const newCard = updatedRoom.whiteCardDeck.shift();
-          if (newCard) {
+        if (!player.isJudge) {
+          // Calculate how many cards the player needs
+          const requiredCards = 7 - player.cards.length;
+
+          // Only draw cards if the player needs them
+          if (requiredCards > 0) {
+            // Draw the exact number of cards needed
+            const newCards = updatedRoom.whiteCardDeck.splice(0, requiredCards);
+
+            // If we're out of cards in the deck, log an error
+            if (newCards.length < requiredCards) {
+              console.warn(
+                `Deck is running low on cards. Player ${player.name} received ${newCards.length} of ${requiredCards} needed cards.`
+              );
+            }
+
             return {
               ...player,
-              cards: [...player.cards, newCard],
+              cards: [...player.cards, ...newCards],
             };
           }
         }

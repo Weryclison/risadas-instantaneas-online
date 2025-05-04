@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 3000,
   },
-  base: "./",
+  base: "/",
   plugins: [react(), mode === "development" && componentTagger()].filter(
     Boolean
   ),

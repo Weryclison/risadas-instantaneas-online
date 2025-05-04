@@ -42,7 +42,7 @@ const Updates = () => {
         { text: "Novo baralho temático: Tecnologia", status: "in-progress" },
         { text: "Melhorias de desempenho e estabilidade", status: "planned" },
       ],
-      estimatedRelease: "Dezembro 2023",
+      estimatedRelease: "Junho 2025",
     },
     {
       id: 2,
@@ -60,7 +60,7 @@ const Updates = () => {
         { text: "Histórico de partidas", status: "planned" },
         { text: "Rankings e tabelas de classificação", status: "planned" },
       ],
-      estimatedRelease: "Fevereiro 2024",
+      estimatedRelease: "Agosto 2025",
     },
     {
       id: 3,
@@ -77,7 +77,7 @@ const Updates = () => {
         },
         { text: "Integração com redes sociais", status: "planned" },
       ],
-      estimatedRelease: "Abril 2024",
+      estimatedRelease: "Outubro 2025",
     },
   ];
 

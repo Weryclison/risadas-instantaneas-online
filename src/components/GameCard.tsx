@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 export interface GameCardProps {
   type: "black" | "white";
@@ -39,7 +39,6 @@ const GameCard: React.FC<GameCardProps> = ({
             ? "bg-gradient-to-r from-gray-800 to-gray-900 text-white"
             : "bg-gradient-to-br from-slate-200 to-slate-300",
           "relative overflow-hidden",
-          winner && "ring-4 ring-green-500 animate-pulse",
           className
         )}
       >
@@ -65,13 +64,13 @@ const GameCard: React.FC<GameCardProps> = ({
           "cursor-pointer hover:shadow-lg transition-shadow",
         selected && "ring-2 ring-primary selected-card",
         disabled && "opacity-60",
-        winner && "ring-4 ring-green-500 animate-pulse",
+        winner && "winning-card",
         "animate-fade-in",
         className
       )}
       onClick={selectable && !disabled ? onClick : undefined}
     >
-      <p className="card-text">{text}</p>
+      <p className="card-text text-center w-full">{text}</p>
       {footerText && (
         <div className="text-xs mt-2 font-light text-right">{footerText}</div>
       )}

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { InvitationDialog } from "@/components/InvitationDialog";
 
 const GameRoom = () => {
   const { roomId } = useParams();
@@ -52,6 +53,7 @@ const GameRoom = () => {
   const [judgeSelection, setJudgeSelection] = useState<number | null>(null);
   const [testPlayerName, setTestPlayerName] = useState("");
   const [joiningRoom, setJoiningRoom] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
 
   useEffect(() => {
     if (!roomId) {
@@ -59,12 +61,9 @@ const GameRoom = () => {
       return;
     }
 
+    // If no player name, show invite dialog instead of redirecting
     if (!playerName) {
-      toast({
-        title: "Nome não definido",
-        description: "Por favor, defina seu apelido primeiro",
-      });
-      navigate("/");
+      setShowInviteDialog(true);
       return;
     }
 
@@ -97,6 +96,13 @@ const GameRoom = () => {
     }
   }, [roomId, navigate, playerName, currentRoom, joinRoom, toast]);
 
+  // Close the invite dialog if player name is set from elsewhere
+  useEffect(() => {
+    if (playerName && showInviteDialog) {
+      setShowInviteDialog(false);
+    }
+  }, [playerName, showInviteDialog]);
+
   // Reset pending card when changing player simulation
   useEffect(() => {
     setPendingCard(null);
@@ -127,6 +133,24 @@ const GameRoom = () => {
         });
       });
   };
+
+  // If invitation dialog is showing, render just that
+  if (showInviteDialog) {
+    return (
+      <>
+        <InvitationDialog
+          roomId={roomId || ""}
+          open={showInviteDialog}
+          onOpenChange={setShowInviteDialog}
+        />
+        <Layout>
+          <div className="flex justify-center items-center h-64">
+            <p>Entrando na sala...</p>
+          </div>
+        </Layout>
+      </>
+    );
+  }
 
   if (isLoading || joiningRoom) {
     return (
@@ -215,7 +239,7 @@ const GameRoom = () => {
       // Forçar re-render para mostrar o efeito visual
       setJudgeSelection(judgeSelection);
 
-      // Aguardar 1 segundo para o efeito visual
+      // Aguardar 1 segundo para o efeito visual simples
       setTimeout(() => {
         submitJudgement(judgeSelection);
         setJudgeSelection(null);
@@ -437,7 +461,7 @@ const GameRoom = () => {
                   {/* Card Selection Confirmation Dialog */}
                   {pendingCard && !hasPlayedCard && !isJudge && (
                     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-                      <div className="bg-black border-2 border-red-500 shadow-xl rounded-lg p-6 max-w-md w-full">
+                      <div className="bg-black border-2 border-white dark:border-primary shadow-xl rounded-lg p-6 max-w-md w-full">
                         <h3 className="text-xl font-bold mb-4 text-white">
                           Confirmar jogada
                         </h3>
@@ -478,16 +502,6 @@ const GameRoom = () => {
                     Como juiz, selecione a melhor resposta entre as cartas
                     jogadas.
                   </p>
-                  {judgeSelection !== null && (
-                    <div className="mt-4 flex justify-center">
-                      <Button
-                        className="w-full max-w-md"
-                        onClick={handleJudgeSubmit}
-                      >
-                        Confirmar Seleção
-                      </Button>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -559,7 +573,7 @@ const GameRoom = () => {
                               isJudge ? "hover:scale-105" : ""
                             } ${
                               judgeSelection === index
-                                ? "ring-4 ring-primary ring-offset-2"
+                                ? "selected-judge-card"
                                 : ""
                             }`}
                             onClick={() =>
@@ -570,7 +584,7 @@ const GameRoom = () => {
                               text={playedCard.card.text}
                               type="white"
                               winner={isWinner}
-                              footerText={isJudge ? `Carta ${index + 1}` : ""}
+                              footerText=""
                             />
                           </div>
                         );
@@ -611,7 +625,7 @@ const GameRoom = () => {
                   judgeSelection !== null && (
                     <div className="mt-4 flex justify-center">
                       <Button
-                        className="w-full max-w-md"
+                        className="w-full max-w-sm px-8"
                         onClick={handleJudgeSubmit}
                       >
                         Confirmar Seleção
@@ -668,7 +682,7 @@ const GameRoom = () => {
                               : ""
                           } ${
                             selectedWhiteCardId === card.id
-                              ? "ring-4 ring-primary ring-offset-2"
+                              ? "selected-player-card"
                               : ""
                           }`}
                           onClick={() =>

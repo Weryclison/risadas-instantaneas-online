@@ -29,6 +29,7 @@ const Index = () => {
   const [roomName, setRoomName] = useState("");
   const [showRoomOptions, setShowRoomOptions] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [tempNickname, setTempNickname] = useState("");
 
   // Verificar se o usuário já tem um apelido salvo
   useEffect(() => {
@@ -36,6 +37,7 @@ const Index = () => {
     const timer = setTimeout(() => {
       if (playerName.trim()) {
         setShowRoomOptions(true);
+        setTempNickname(playerName);
       }
       setIsInitialized(true);
     }, 100);
@@ -44,6 +46,38 @@ const Index = () => {
   }, [playerName]);
 
   const handleSetName = () => {
+    if (!tempNickname.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Por favor, digite seu apelido para continuar",
+      });
+      return;
+    }
+
+    // Validação de tamanho mínimo
+    if (tempNickname.trim().length < 3) {
+      toast({
+        title: "Nome muito curto",
+        description: "Seu apelido deve ter pelo menos 3 caracteres",
+      });
+      return;
+    }
+
+    // Now set the global playerName only when confirmed
+    setPlayerName(tempNickname.trim());
+
+    // Mostrar confirmação ao usuário
+    toast({
+      title: "Apelido confirmado",
+      description: `Bem-vindo, ${tempNickname.trim()}!`,
+    });
+
+    // Mostrar opções de sala
+    setShowRoomOptions(true);
+  };
+
+  const handleCreateRoom = () => {
+    // Use the current global playerName for validation since it should be set by now
     if (!playerName.trim()) {
       toast({
         title: "Nome obrigatório",
@@ -52,21 +86,11 @@ const Index = () => {
       return;
     }
 
-    // Mostrar confirmação ao usuário
-    toast({
-      title: "Apelido confirmado",
-      description: `Bem-vindo, ${playerName}!`,
-    });
-
-    // Mostrar opções de sala
-    setShowRoomOptions(true);
-  };
-
-  const handleCreateRoom = () => {
-    if (!playerName.trim()) {
+    // Validação de tamanho mínimo
+    if (playerName.trim().length < 3) {
       toast({
-        title: "Nome obrigatório",
-        description: "Por favor, digite seu apelido para continuar",
+        title: "Nome muito curto",
+        description: "Seu apelido deve ter pelo menos 3 caracteres",
       });
       return;
     }
@@ -79,10 +103,20 @@ const Index = () => {
   };
 
   const handleJoinRoom = () => {
+    // Use the current global playerName for validation since it should be set by now
     if (!playerName.trim()) {
       toast({
         title: "Nome obrigatório",
         description: "Por favor, digite seu apelido para continuar",
+      });
+      return;
+    }
+
+    // Validação de tamanho mínimo
+    if (playerName.trim().length < 3) {
+      toast({
+        title: "Nome muito curto",
+        description: "Seu apelido deve ter pelo menos 3 caracteres",
       });
       return;
     }
@@ -131,13 +165,6 @@ const Index = () => {
       case "updates":
         navigate("/updates");
         break;
-      case "viewCards":
-        // Will be implemented in a future release
-        toast({
-          title: "Em desenvolvimento",
-          description: "Esta funcionalidade estará disponível em breve!",
-        });
-        break;
       case "exit":
         // Just refresh the page to restart the app
         window.location.reload();
@@ -152,7 +179,7 @@ const Index = () => {
       <div className="max-w-md mx-auto space-y-10 py-10">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-primary mb-2 animate-fade-in">
-            Cartas Contra
+            Cartas Contra Brasileiros
           </h1>
           <p className="text-muted-foreground">
             Um jogo de cartas politicamente incorreto
@@ -171,10 +198,20 @@ const Index = () => {
               </label>
               <Input
                 id="name"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
+                value={tempNickname}
+                onChange={(e) => setTempNickname(e.target.value)}
                 placeholder="Digite seu apelido"
                 className="w-full"
+                autoComplete="off"
+                onBlur={() => {
+                  // Do nothing, just to prevent immediate action on mobile
+                }}
+                onKeyDown={(e) => {
+                  // Only handle Enter key if nickname meets minimum requirements
+                  if (e.key === "Enter" && tempNickname.trim().length >= 3) {
+                    handleSetName();
+                  }
+                }}
               />
               <Button onClick={handleSetName} className="w-full">
                 Confirmar apelido
@@ -217,15 +254,6 @@ const Index = () => {
                 variant="outline"
               >
                 <span className="mr-2 text-lg">🔍</span> ENCONTRAR PARTIDAS
-              </Button>
-
-              {/* Ver cartas */}
-              <Button
-                onClick={() => handleMoreOptions("viewCards")}
-                className="w-full h-14 text-base"
-                variant="outline"
-              >
-                <span className="mr-2 text-lg">👀</span> VER CARTAS
               </Button>
 
               {/* Mais opções */}
@@ -276,7 +304,11 @@ const Index = () => {
                     placeholder="Digite o código da sala"
                     className="flex-1"
                   />
-                  <Button onClick={handleJoinRoom} variant="default">
+                  <Button
+                    onClick={handleJoinRoom}
+                    variant="default"
+                    disabled={!playerName || playerName.trim().length < 3}
+                  >
                     ENTRAR
                   </Button>
                 </div>

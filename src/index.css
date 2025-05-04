@@ -96,15 +96,22 @@
 .black-card {
   @apply bg-game-black-card text-white rounded-md p-5 h-52 flex items-center justify-center shadow-md border-2 border-gray-800;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
 }
 
 .white-card {
   @apply bg-game-white-card text-black rounded-md p-5 h-52 flex items-center justify-center shadow-sm border border-gray-300;
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
 }
 
 .card-text {
-  @apply font-medium text-lg;
+  @apply font-medium text-lg text-center w-full;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Efeito para cartas selecionadas */
@@ -161,4 +168,58 @@
   height: calc(100% - 2.7rem); /* Altura total menos o padding-top */
   width: 1px;
   @apply bg-border;
+}
+
+/* Remover as animações anteriores */
+.winner-border-animation,
+.winner-shine-effect {
+  display: none;
+}
+
+/* Destaque para cartão vencedor */
+.winning-card {
+  animation: simple-winner-flash 1s ease-out forwards;
+}
+
+@keyframes simple-winner-flash {
+  0% {
+    background-color: rgba(134, 239, 172, 0.8); /* Verde bem claro */
+  }
+  100% {
+    background-color: white; /* Volta para a cor original */
+  }
+}
+
+/* Estilo melhorado para carta selecionada pelo juiz */
+.selected-judge-card {
+  position: relative;
+  z-index: 5;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.5);
+}
+
+.selected-judge-card::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  background: linear-gradient(45deg, #7c3aed, #8b5cf6, #6d28d9);
+  border-radius: 10px;
+  z-index: -1;
+}
+
+/* Estilo melhorado para carta selecionada pelo jogador */
+.selected-player-card {
+  position: relative;
+  z-index: 5;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.5);
+}
+
+.selected-player-card::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, #7c3aed, #8b5cf6, #6d28d9);
+  border-radius: 10px;
+  z-index: -1;
 }

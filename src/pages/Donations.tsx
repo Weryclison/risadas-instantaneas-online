@@ -71,16 +71,6 @@ const Donations = () => {
                 Faça uma doação via PIX
               </h3>
 
-              <div className="flex justify-center mb-6">
-                <div className="bg-white p-4 rounded-lg">
-                  <img
-                    src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
-                    alt="QR Code PIX"
-                    className="w-40 h-40 mx-auto"
-                  />
-                </div>
-              </div>
-
               <div className="flex items-center space-x-2 mb-4">
                 <Input value={pixKey} readOnly className="font-mono text-sm" />
                 <Button
@@ -93,8 +83,7 @@ const Donations = () => {
               </div>
 
               <p className="text-sm text-muted-foreground text-center">
-                Escaneie o QR code ou copie a chave PIX acima para realizar sua
-                doação.
+                Copie a chave PIX acima para realizar sua doação.
               </p>
             </Card>
           </div>

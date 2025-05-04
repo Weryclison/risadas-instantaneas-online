@@ -80,5 +80,6 @@ export interface SocketEvents {
   // Eventos do servidor para o cliente
   roomCreated: GameRoom;
   roomUpdated: GameRoom;
+  roomClosed: { message: string };
   error: { message: string };
 }
