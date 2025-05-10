@@ -53,6 +53,7 @@ export interface GameRoom {
   blackCardDeck: BlackCard[];
   round: number;
   maxRounds: number;
+  targetScore: number;
   status: GameStatus;
   createdAt: string;
   winner: Player | null;
@@ -70,6 +71,7 @@ export interface SocketEvents {
     hasPassword: boolean;
     password: string;
     maxPlayers: number;
+    targetScore: number;
   };
   joinRoom: { roomId: string; playerName: string; password?: string };
   leaveRoom: { roomId: string; playerId: string };

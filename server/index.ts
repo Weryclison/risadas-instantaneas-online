@@ -35,7 +35,11 @@ const createPlayer = (name: string, isJudge: boolean = false): Player => ({
 });
 
 // Função para criar uma nova sala
-const createRoom = (name: string, playerName: string): GameRoom => {
+const createRoom = (
+  name: string,
+  playerName: string,
+  targetScore: number = 8
+): GameRoom => {
   const roomId = Math.random().toString(36).substr(2, 6);
   const player = createPlayer(playerName, true);
 
@@ -63,6 +67,7 @@ const createRoom = (name: string, playerName: string): GameRoom => {
     blackCardDeck: shuffledBlackCards,
     round: 0,
     maxRounds: 10,
+    targetScore: targetScore,
     status: "waiting",
     createdAt: new Date().toISOString(),
     winner: null,
@@ -134,8 +139,8 @@ io.on("connection", (socket) => {
   console.log("Novo cliente conectado:", socket.id);
 
   // Criar uma nova sala
-  socket.on("createRoom", ({ name, playerName }) => {
-    const room = createRoom(name, playerName);
+  socket.on("createRoom", ({ name, playerName, targetScore }) => {
+    const room = createRoom(name, playerName, targetScore);
     socket.join(room.id);
     socket.emit("roomCreated", room);
     io.to(room.id).emit("roomUpdated", room);
@@ -169,6 +174,13 @@ io.on("connection", (socket) => {
       socket.emit("error", { message: "Não é possível iniciar o jogo" });
       return;
     }
+
+    // Resetar pontuações e status do jogo
+    room.players = room.players.map((player) => ({
+      ...player,
+      score: 0, // Resetar pontuação para zero
+    }));
+    room.winner = null; // Limpar o vencedor anterior
 
     const updatedRoom = dealCards(room);
     rooms[roomId] = updatedRoom;
@@ -228,10 +240,10 @@ io.on("connection", (socket) => {
       p.isJudge = index === room.currentJudgeIndex;
     });
 
-    // Verifica se o jogo acabou
-    if (room.round >= room.maxRounds) {
+    // Verificar se algum jogador atingiu a pontuação alvo
+    const maxScore = Math.max(...room.players.map((p) => p.score));
+    if (maxScore >= room.targetScore) {
       room.status = "finished";
-      const maxScore = Math.max(...room.players.map((p) => p.score));
       room.winner = room.players.find((p) => p.score === maxScore) || null;
     } else {
       room.round += 1;

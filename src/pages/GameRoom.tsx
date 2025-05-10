@@ -367,8 +367,8 @@ const GameRoom = () => {
           <div>
             <h1 className="text-3xl font-bold">{currentRoom.name}</h1>
             <p className="text-sm text-muted-foreground">
-              Rodada {currentRoom.round} de {currentRoom.maxRounds} ·{" "}
-              {currentRoom.players.length} jogadores
+              Rodada: {currentRoom.round} | Objetivo: {currentRoom.targetScore}{" "}
+              pontos · {currentRoom.players.length} jogadores
             </p>
           </div>
           <div className="flex gap-2">
@@ -520,14 +520,9 @@ const GameRoom = () => {
                       Jogo Finalizado!
                     </h3>
                     <p className="text-sm">
-                      {currentRoom.winner
-                        ? `${currentRoom.winner.name} venceu com ${currentRoom.winner.score} pontos!`
-                        : "O jogo terminou em empate!"}
+                      Confira o resultado no painel principal.
                     </p>
                   </div>
-                  <Button className="w-full" onClick={() => startGame()}>
-                    Jogar Novamente
-                  </Button>
                 </div>
               )}
             </div>
@@ -543,95 +538,129 @@ const GameRoom = () => {
           {/* Right Column - Player Cards (8 cols) */}
           <div className="col-span-12 md:col-span-8 space-y-6">
             {/* Área reservada para cartas enviadas - sempre visível durante o jogo */}
-            {currentRoom.status !== "waiting" && (
-              <div className="bg-card p-6 rounded-lg shadow">
-                <h2 className="text-xl font-semibold mb-4">
-                  {currentRoom.status === "judging"
-                    ? isJudge
-                      ? "Escolha a melhor resposta:"
-                      : "Respostas dos jogadores (o juiz está decidindo):"
-                    : "Cartas Enviadas"}
-                </h2>
+            {currentRoom.status !== "waiting" &&
+              currentRoom.status !== "finished" && (
+                <div className="bg-card p-6 rounded-lg shadow">
+                  <h2 className="text-xl font-semibold mb-4">
+                    {currentRoom.status === "judging"
+                      ? isJudge
+                        ? "Escolha a melhor resposta:"
+                        : "Respostas dos jogadores (o juiz está decidindo):"
+                      : "Cartas Enviadas"}
+                  </h2>
 
-                {currentRoom.playedCards.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {currentRoom.playedCards.map((playedCard, index) => {
-                      const isCurrentPlayerCard =
-                        playedCard.playerId === currentPlayer?.id;
-                      // Verificar se esta carta foi a vencedora (quando existir esta propriedade)
-                      const isWinner = Boolean(
-                        // @ts-ignore - lidando com propriedade que pode ser adicionada depois
-                        playedCard.isWinner
-                      );
+                  {currentRoom.playedCards.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {currentRoom.playedCards.map((playedCard, index) => {
+                        const isCurrentPlayerCard =
+                          playedCard.playerId === currentPlayer?.id;
+                        // Verificar se esta carta foi a vencedora (quando existir esta propriedade)
+                        const isWinner = Boolean(
+                          // @ts-ignore - lidando com propriedade que pode ser adicionada depois
+                          playedCard.isWinner
+                        );
 
-                      // Durante a fase de julgamento, mostrar todas as cartas
-                      if (currentRoom.status === "judging") {
-                        return (
-                          <div
-                            key={index}
-                            className={`cursor-pointer transition-all transform ${
-                              isJudge ? "hover:scale-105" : ""
-                            } ${
-                              judgeSelection === index
-                                ? "selected-judge-card"
-                                : ""
-                            }`}
-                            onClick={() =>
-                              isJudge ? handleJudgeSelection(index) : null
-                            }
-                          >
-                            <GameCard
-                              text={playedCard.card.text}
-                              type="white"
-                              winner={isWinner}
-                              footerText=""
-                            />
+                        // Durante a fase de julgamento, mostrar todas as cartas
+                        if (currentRoom.status === "judging") {
+                          return (
+                            <div
+                              key={index}
+                              className={`cursor-pointer transition-all transform ${
+                                isJudge ? "hover:scale-105" : ""
+                              } ${
+                                judgeSelection === index
+                                  ? "selected-judge-card"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                isJudge ? handleJudgeSelection(index) : null
+                              }
+                            >
+                              <GameCard
+                                text={playedCard.card.text}
+                                type="white"
+                                winner={isWinner}
+                                footerText=""
+                              />
+                            </div>
+                          );
+                        } else {
+                          // Durante a fase de jogo, mostrar cartas face-down para outros jogadores
+                          return (
+                            <div key={index} className="flex justify-center">
+                              <GameCard
+                                text={playedCard.card.text}
+                                type="white"
+                                footerText=""
+                                faceDown={!isCurrentPlayerCard}
+                              />
+                            </div>
+                          );
+                        }
+                      })}
+                    </div>
+                  ) : (
+                    // Espaços reservados para cartas - quando nenhuma carta foi jogada ainda
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {Array.from({
+                        length: currentRoom.players.filter((p) => !p.isJudge)
+                          .length,
+                      }).map((_, index) => (
+                        <div key={index} className="flex justify-center">
+                          <div className="border border-dashed border-slate-300 rounded-lg h-36 w-full flex items-center justify-center bg-slate-100/10">
+                            {/* Sem texto, apenas o espaço reservado */}
                           </div>
-                        );
-                      } else {
-                        // Durante a fase de jogo, mostrar cartas face-down para outros jogadores
-                        return (
-                          <div key={index} className="flex justify-center">
-                            <GameCard
-                              text={playedCard.card.text}
-                              type="white"
-                              footerText=""
-                              faceDown={!isCurrentPlayerCard}
-                            />
-                          </div>
-                        );
-                      }
-                    })}
-                  </div>
-                ) : (
-                  // Espaços reservados para cartas - quando nenhuma carta foi jogada ainda
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {Array.from({
-                      length: currentRoom.players.filter((p) => !p.isJudge)
-                        .length,
-                    }).map((_, index) => (
-                      <div key={index} className="flex justify-center">
-                        <div className="border border-dashed border-slate-300 rounded-lg h-36 w-full flex items-center justify-center bg-slate-100/10">
-                          {/* Sem texto, apenas o espaço reservado */}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Botão de confirmação para o juiz */}
-                {currentRoom.status === "judging" &&
-                  isJudge &&
-                  judgeSelection !== null && (
-                    <div className="mt-4 flex justify-center">
-                      <Button
-                        className="w-full max-w-sm px-8"
-                        onClick={handleJudgeSubmit}
-                      >
-                        Confirmar Seleção
-                      </Button>
+                      ))}
                     </div>
                   )}
+
+                  {/* Botão de confirmação para o juiz */}
+                  {currentRoom.status === "judging" &&
+                    isJudge &&
+                    judgeSelection !== null && (
+                      <div className="mt-4 flex justify-center">
+                        <Button
+                          className="w-full max-w-sm px-8"
+                          onClick={handleJudgeSubmit}
+                        >
+                          Confirmar Seleção
+                        </Button>
+                      </div>
+                    )}
+                </div>
+              )}
+
+            {/* Exibição do campeão quando o jogo termina */}
+            {currentRoom.status === "finished" && (
+              <div className="bg-card p-10 rounded-lg shadow flex flex-col items-center justify-center min-h-[300px]">
+                <h2 className="text-4xl font-bold mb-6 text-center">
+                  Fim de Jogo!
+                </h2>
+                {currentRoom.winner ? (
+                  <>
+                    <div className="flex items-center justify-center mb-4">
+                      <Crown className="h-12 w-12 text-yellow-500 mr-2" />
+                      <h3 className="text-3xl font-bold text-center">
+                        {currentRoom.winner.name}
+                      </h3>
+                    </div>
+                    <p className="text-xl text-center mb-8">
+                      Venceu com {currentRoom.winner.score} pontos!
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-2xl text-center mb-8">
+                    O jogo terminou em empate!
+                  </p>
+                )}
+                <Button
+                  size="lg"
+                  onClick={() => startGame()}
+                  className="px-8 py-6 text-lg"
+                >
+                  Jogar Novamente
+                </Button>
               </div>
             )}
 

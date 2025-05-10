@@ -53,6 +53,7 @@ export interface GameRoom {
   blackCardDeck: BlackCard[];
   round: number;
   maxRounds: number;
+  targetScore: number;
   status: GameStatus;
   createdAt: string;
   winner: Player | null;
@@ -61,7 +62,7 @@ export interface GameRoom {
 // Tipos para eventos do Socket.IO
 export interface SocketEvents {
   // Eventos do cliente para o servidor
-  createRoom: { name: string; playerName: string };
+  createRoom: { name: string; playerName: string; targetScore: number };
   joinRoom: { roomId: string; playerName: string };
   leaveRoom: { roomId: string; playerId: string };
   startGame: { roomId: string };

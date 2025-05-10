@@ -21,6 +21,13 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Layout from "@/components/Layout";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Schema for room creation form
 const formSchema = z.object({
@@ -31,6 +38,7 @@ const formSchema = z.object({
   hasPassword: z.boolean().default(false),
   password: z.string().optional(),
   maxPlayers: z.number().min(2).max(20),
+  targetScore: z.number().min(8).max(16),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -48,6 +56,7 @@ const CreateRoom = () => {
       hasPassword: false,
       password: "",
       maxPlayers: 8,
+      targetScore: 8,
     },
   });
 
@@ -77,7 +86,8 @@ const CreateRoom = () => {
       values.roomName,
       values.hasPassword,
       values.password || "",
-      values.maxPlayers
+      values.maxPlayers,
+      values.targetScore
     );
 
     if (roomId) {
@@ -173,6 +183,35 @@ const CreateRoom = () => {
                 )}
               />
             )}
+
+            <FormField
+              control={form.control}
+              name="targetScore"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pontuação para Vitória</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    defaultValue={field.value.toString()}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a pontuação para vitória" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="8">8 pontos</SelectItem>
+                      <SelectItem value="12">12 pontos</SelectItem>
+                      <SelectItem value="16">16 pontos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    O primeiro jogador a atingir essa pontuação vence o jogo
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

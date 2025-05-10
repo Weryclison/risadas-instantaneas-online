@@ -28,7 +28,8 @@ interface GameContextType {
     name: string,
     hasPassword?: boolean,
     password?: string,
-    maxPlayers?: number
+    maxPlayers?: number,
+    targetScore?: number
   ) => string | null;
   joinRoom: (roomId: string, password?: string) => Promise<boolean>;
   leaveRoom: () => void;
@@ -222,7 +223,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     playerName: string,
     hasPassword: boolean = false,
     password: string = "",
-    maxPlayers: number = 8
+    maxPlayers: number = 8,
+    targetScore: number = 8
   ): GameRoom => {
     // Use um UUID completo para evitar problemas com o Supabase
     const roomId = uuidv4();
@@ -257,6 +259,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       blackCardDeck: shuffledBlackCards,
       round: 0,
       maxRounds: 10,
+      targetScore: targetScore,
       status: "waiting",
       createdAt: new Date().toISOString(),
       winner: null,
@@ -403,7 +406,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     name: string,
     hasPassword: boolean = false,
     password: string = "",
-    maxPlayers: number = 8
+    maxPlayers: number = 8,
+    targetScore: number = 8
   ) => {
     if (!playerName) {
       toast({
@@ -445,7 +449,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       playerName,
       hasPassword,
       password,
-      maxPlayers
+      maxPlayers,
+      targetScore
     );
 
     // Criar a sala no Supabase
@@ -678,7 +683,18 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
 
     try {
-      const updatedRoom = dealCardsToPlayers(currentRoom);
+      // Criar uma cópia da sala atual
+      const roomCopy = { ...currentRoom };
+
+      // Resetar pontuações e status do jogo
+      roomCopy.players = roomCopy.players.map((player) => ({
+        ...player,
+        score: 0, // Resetar pontuação para zero
+      }));
+      roomCopy.winner = null; // Limpar o vencedor anterior
+
+      // Distribuir cartas e iniciar o jogo
+      const updatedRoom = dealCardsToPlayers(roomCopy);
 
       // Atualizar a sala no Supabase
       const success = await roomService.updateRoom(updatedRoom);
@@ -867,10 +883,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       // Get next black card
       updatedRoom.currentBlackCard = updatedRoom.blackCardDeck.shift() || null;
 
-      // Check if game is over
-      if (updatedRoom.round >= updatedRoom.maxRounds) {
+      // Verificar se algum jogador atingiu a pontuação alvo
+      const maxScore = Math.max(...updatedRoom.players.map((p) => p.score));
+      if (maxScore >= updatedRoom.targetScore) {
         updatedRoom.status = "finished";
-        const maxScore = Math.max(...updatedRoom.players.map((p) => p.score));
         updatedRoom.winner =
           updatedRoom.players.find((p) => p.score === maxScore) || null;
       } else {
