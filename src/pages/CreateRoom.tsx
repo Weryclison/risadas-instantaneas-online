@@ -39,6 +39,7 @@ const formSchema = z.object({
   password: z.string().optional(),
   maxPlayers: z.number().min(2).max(20),
   targetScore: z.number().min(8).max(16),
+  roundDuration: z.number().min(30).max(60),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -57,6 +58,7 @@ const CreateRoom = () => {
       password: "",
       maxPlayers: 8,
       targetScore: 8,
+      roundDuration: 45,
     },
   });
 
@@ -87,7 +89,8 @@ const CreateRoom = () => {
       values.hasPassword,
       values.password || "",
       values.maxPlayers,
-      values.targetScore
+      values.targetScore,
+      values.roundDuration
     );
 
     if (roomId) {
@@ -230,6 +233,35 @@ const CreateRoom = () => {
                   </FormControl>
                   <FormDescription>
                     Escolha entre 2 e 20 jogadores
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="roundDuration"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Duração da Rodada</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    defaultValue={field.value.toString()}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a duração da rodada" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="30">30 segundos</SelectItem>
+                      <SelectItem value="45">45 segundos</SelectItem>
+                      <SelectItem value="60">60 segundos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Tempo que os jogadores terão para escolher uma carta
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

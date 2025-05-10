@@ -54,6 +54,7 @@ export interface GameRoom {
   round: number;
   maxRounds: number;
   targetScore: number;
+  roundDuration: number;
   status: GameStatus;
   createdAt: string;
   winner: Player | null;
@@ -72,6 +73,7 @@ export interface SocketEvents {
     password: string;
     maxPlayers: number;
     targetScore: number;
+    roundDuration: number;
   };
   joinRoom: { roomId: string; playerName: string; password?: string };
   leaveRoom: { roomId: string; playerId: string };

@@ -29,7 +29,8 @@ interface GameContextType {
     hasPassword?: boolean,
     password?: string,
     maxPlayers?: number,
-    targetScore?: number
+    targetScore?: number,
+    roundDuration?: number
   ) => string | null;
   joinRoom: (roomId: string, password?: string) => Promise<boolean>;
   leaveRoom: () => void;
@@ -224,7 +225,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     hasPassword: boolean = false,
     password: string = "",
     maxPlayers: number = 8,
-    targetScore: number = 8
+    targetScore: number = 8,
+    roundDuration: number = 45
   ): GameRoom => {
     // Use um UUID completo para evitar problemas com o Supabase
     const roomId = uuidv4();
@@ -260,6 +262,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       round: 0,
       maxRounds: 10,
       targetScore: targetScore,
+      roundDuration: roundDuration,
       status: "waiting",
       createdAt: new Date().toISOString(),
       winner: null,
@@ -407,7 +410,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     hasPassword: boolean = false,
     password: string = "",
     maxPlayers: number = 8,
-    targetScore: number = 8
+    targetScore: number = 8,
+    roundDuration: number = 45
   ) => {
     if (!playerName) {
       toast({
@@ -450,7 +454,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       hasPassword,
       password,
       maxPlayers,
-      targetScore
+      targetScore,
+      roundDuration
     );
 
     // Criar a sala no Supabase

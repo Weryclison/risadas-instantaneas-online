@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import GameCard from "@/components/GameCard";
+import { RoundTimer } from "@/components/RoundTimer";
 import { useGame } from "@/contexts/GameContext";
 import { WhiteCard, Player } from "@/types/game";
 import { useToast } from "@/components/ui/use-toast";
@@ -54,6 +55,7 @@ const GameRoom = () => {
   const [testPlayerName, setTestPlayerName] = useState("");
   const [joiningRoom, setJoiningRoom] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [timerActive, setTimerActive] = useState(false);
 
   useEffect(() => {
     if (!roomId) {
@@ -108,6 +110,25 @@ const GameRoom = () => {
     setPendingCard(null);
     setSelectedWhiteCardId(null);
   }, [simulatedPlayerName]);
+
+  // Ativar o temporizador quando a rodada começar
+  useEffect(() => {
+    if (currentRoom?.status === "playing") {
+      const currentPlayer = getPlayerFromCurrentRoom();
+      const hasPlayedCard =
+        currentPlayer &&
+        currentRoom.playedCards.some((pc) => pc.playerId === currentPlayer.id);
+
+      // Ativar o temporizador apenas para jogadores que não são juízes e ainda não jogaram
+      if (currentPlayer && !currentPlayer.isJudge && !hasPlayedCard) {
+        setTimerActive(true);
+      } else {
+        setTimerActive(false);
+      }
+    } else {
+      setTimerActive(false);
+    }
+  }, [currentRoom?.status, currentRoom?.playedCards, getPlayerFromCurrentRoom]);
 
   const handleExit = () => {
     leaveRoom();
@@ -207,6 +228,9 @@ const GameRoom = () => {
       title: "Carta enviada",
       description: "Sua escolha foi confirmada",
     });
+
+    // Cancela o temporizador quando o jogador confirma uma carta
+    setTimerActive(false);
 
     // Reset pending state but keep selected state for visual indication
     setPendingCard(null);
@@ -359,6 +383,46 @@ const GameRoom = () => {
     );
   };
 
+  // Função para lidar com o timeout do temporizador
+  const handleTimerTimeout = () => {
+    // Se o jogador não selecionou uma carta, seleciona uma aleatoriamente
+    const currentPlayer = getPlayerFromCurrentRoom();
+
+    if (
+      currentPlayer &&
+      !currentPlayer.isJudge &&
+      currentRoom?.status === "playing"
+    ) {
+      // Verifica se o jogador já jogou uma carta
+      const hasPlayedCard = currentRoom.playedCards.some(
+        (pc) => pc.playerId === currentPlayer.id
+      );
+
+      if (!hasPlayedCard && currentPlayer.cards.length > 0) {
+        // Seleciona uma carta aleatória
+        const randomIndex = Math.floor(
+          Math.random() * currentPlayer.cards.length
+        );
+        const randomCard = currentPlayer.cards[randomIndex];
+
+        toast({
+          title: "Tempo esgotado!",
+          description: "Uma carta foi selecionada aleatoriamente.",
+        });
+
+        // Submete a carta
+        selectCard(randomCard);
+      }
+    }
+
+    setTimerActive(false);
+  };
+
+  // Função para cancelar o temporizador (quando o jogador seleciona uma carta manualmente)
+  const handleTimerCancel = () => {
+    setTimerActive(false);
+  };
+
   return (
     <Layout>
       <div className="container mx-auto p-4 space-y-6">
@@ -457,6 +521,18 @@ const GameRoom = () => {
                         : "Selecione uma carta da sua mão para responder à carta preta."}
                     </p>
                   </div>
+
+                  {/* Temporizador da rodada */}
+                  {!isJudge && !hasPlayedCard && (
+                    <div className="mt-4">
+                      <RoundTimer
+                        duration={currentRoom.roundDuration}
+                        onTimeout={handleTimerTimeout}
+                        isActive={timerActive}
+                        onCancel={handleTimerCancel}
+                      />
+                    </div>
+                  )}
 
                   {/* Card Selection Confirmation Dialog */}
                   {pendingCard && !hasPlayedCard && !isJudge && (
